@@ -19,9 +19,8 @@ pub struct Router {
 
 impl Router {
     pub fn new() -> Router {
-        let handler = |_req: Request, _res: Response| panic!("root of router has been called");
         Router {
-            routes: RouteNode::new("/", handler),
+            routes: RouteNode::new("/", None),
         }
     }
 
@@ -66,7 +65,21 @@ impl Router {
     }
 
     pub fn handle_request(&mut self, path: &str) -> Result<(), &str> {
-        self.routes.call_handler(path, Request {}, Response {})
+        self.call_handler(path, Request {}, Response {})
+    }
+
+    fn call_handler(&self, path: &str, request: Request, response: Response) -> Result<(), &str> {
+        match self.routes.find(path) {
+            Some(node) => {
+                if let Some(handler) = node.handler {
+                        (handler)(request, response);
+                        Ok(())
+                } else {
+                    Err("No route found")
+                }
+            }
+            None => Err("No route found"),
+        }
     }
 }
 
@@ -82,7 +95,7 @@ mod tests {
         let mut router = Router::new();
 
         router.route(HttpMethod::Get, "/hello/world", handler);
-
+        println!("{:?}", router.routes);
         assert!(router.routes.find("GET/hello/world").is_some());
     }
 
@@ -134,5 +147,27 @@ mod tests {
         router.delete("/hello/world", handler);
 
         assert!(router.routes.find("DELETE/hello/world").is_some());
+    }
+
+    #[test]
+    fn can_call_corresponding_handler() {
+        let handler = |_req: Request, _res: Response| {};
+        let mut router = Router::new();
+        router.get("/hello/world", handler);
+
+        assert!(router
+            .call_handler("GET/hello/world", Request {}, Response {})
+            .is_ok());
+    }
+
+    #[test]
+    fn call_handler_returns_error_when_no_path_match() {
+        let handler = |_req: Request, _res: Response| {};
+        let mut router = Router::new();
+        router.get("/hello/world", handler);
+
+        assert!(router
+            .call_handler("not/found", Request {}, Response {})
+            .is_err());
     }
 }
