@@ -72,8 +72,8 @@ impl Router {
         match self.routes.find(path) {
             Some(node) => {
                 if let Some(handler) = node.handler {
-                        (handler)(request, response);
-                        Ok(())
+                    (handler)(request, response);
+                    Ok(())
                 } else {
                     Err("No route found")
                 }
@@ -168,6 +168,18 @@ mod tests {
 
         assert!(router
             .call_handler("not/found", Request {}, Response {})
+            .is_err());
+    }
+
+    #[test]
+    fn call_handler_returns_error_when_no_handler() {
+        let handler = |_req: Request, _res: Response| {};
+        let mut router = Router::new();
+        router.get("/hello/world", handler);
+        router.get("/hello/you", handler);
+
+        assert!(router
+            .call_handler("/hello", Request {}, Response {})
             .is_err());
     }
 }
