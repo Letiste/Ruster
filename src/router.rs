@@ -64,7 +64,7 @@ impl Router {
         self.route(HttpMethod::Delete, path, handler)
     }
 
-    pub fn handle_request(&mut self, path: &str) -> Result<(), &str> {
+    pub fn handle_request(&self, path: &str) -> Result<(), &str> {
         self.call_handler(path, Request {}, Response {})
     }
 
