@@ -16,7 +16,7 @@ impl RouteNode {
             panic!("path is empty");
         }
         RouteNode {
-            path: path.to_string(),
+            path: Self::without_ending_slash(path),
             handler,
             children: Vec::new(),
         }
@@ -26,7 +26,7 @@ impl RouteNode {
         if path.is_empty() {
             panic!("path is empty");
         }
-        let path = Self::with_starting_slash(path);
+        let path = Self::without_ending_slash(&Self::with_starting_slash(path));
         self.add_recursive(&path, handler);
     }
 
@@ -91,7 +91,7 @@ impl RouteNode {
         if path.is_empty() {
             return None;
         }
-        let path = Self::with_starting_slash(path);
+        let path = Self::without_ending_slash(&Self::with_starting_slash(path));
         let mut path_iter = path.chars().peekable();
         let mut node = self;
         loop {
@@ -126,6 +126,18 @@ impl RouteNode {
             format!("/{}", path)
         }
     }
+
+    fn without_ending_slash(path: &str) -> String {
+        if path.len() == 1 {
+            String::from(path)
+        } else if let Some(stripped_path) = path.strip_suffix('/') {
+            String::from(stripped_path)
+        } else {
+            String::from(path)
+        }
+    }
+
+
 }
 
 #[cfg(test)]
@@ -144,6 +156,20 @@ mod tests {
     #[should_panic]
     fn new_route_node_with_empty_path_should_panic() {
         RouteNode::new("", None);
+    }
+
+    #[test]
+    fn new_route_node_with_ending_slash_should_be_stripped() {
+        let route_node = RouteNode::new("hello/", None);
+
+        assert_eq!(route_node.path, "hello");
+    }
+
+    #[test]
+    fn new_route_node_with_path_as_one_slash_should_not_be_stripped() {
+        let route_node = RouteNode::new("/", None);
+
+        assert_eq!(route_node.path, "/");
     }
 
     #[test]
@@ -264,5 +290,18 @@ mod tests {
         let route_node = RouteNode::new("/hello", None);
 
         assert!(route_node.find("/goodbye").is_none());
+    }
+
+    #[test]
+    fn find_route_should_ignore_last_slash() {
+        let route_node = RouteNode::new("/hello", None);
+
+        assert!(route_node.find("/hello").is_some());
+        assert!(route_node.find("/hello/").is_some());
+
+        let route_node = RouteNode::new("/hello/", None);
+
+        assert!(route_node.find("/hello").is_some());
+        assert!(route_node.find("/hello/").is_some());
     }
 }
